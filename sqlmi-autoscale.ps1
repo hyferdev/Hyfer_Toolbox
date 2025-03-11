@@ -6,7 +6,11 @@ param (
     [string]$resourceGroupName = "your-resource-group",
     [array]$sqlManagedInstances = @("sqlmi-01", "sqlmi-02", "sqlmi-03"),
     [int]$targetUtilization = 75  # Bring storage usage back to 75%
+    [int]$targetUtilization = 75,  # Bring storage usage back to 75%
+    [int]$scaleThreshold = 90,  # Scale storage when usage exceeds 90%
+    [string]$logicAppUrl = "your-logic-app-url"  # Logic App URL
 )
+
 # Connect to Azure
 $AzureContext = (Connect-AzAccount -Identity).Context
 # Set the correct subscription
@@ -18,6 +22,37 @@ function Round-UpToMultipleOf32GB {
         [int]$sizeGB
     )
     return [math]::Ceiling($sizeGB / 32) * 32
+}
+
+# Function to send an email via Logic App
+function Send-EmailNotification {
+    param (
+        [string]$sqlMI,
+        [int]$currentStorage,
+        [int]$newStorage,
+        [double]$currentUsage
+    )
+
+    # Email Subject & Body
+    $emailSubject = "SQL MI Storage Increased for $sqlMI"
+    $emailBody = "SQL Managed Instance: $sqlMI storage was increased from $currentStorage GB to $newStorage GB due to reaching $currentUsage% utilization."
+
+    # JSON Payload for Logic App
+    $payload = @{
+        "subject" = $emailSubject
+        "body" = $emailBody
+    } | ConvertTo-Json -Depth 10
+
+    # Call Logic App via HTTP Request
+    try {
+        $response = Invoke-RestMethod -Uri $logicAppUrl -Method Post -Headers @{
+            "Content-Type"  = "application/json"
+        } -Body $payload
+
+        Write-Output "✅ Email notification successfully triggered via Logic App for $sqlMI!"
+    } catch {
+        Write-Output ("❌ Failed to trigger Logic App for {0}: {1}" -f $sqlMI, $_)
+    }
 }
 
 foreach ($sqlMI in $sqlManagedInstances) {
@@ -39,8 +74,8 @@ foreach ($sqlMI in $sqlManagedInstances) {
             continue
         }
 
-        # Scale storage if utilization exceeds 90%
-        if ($currentUsage -ge 90) {
+        # Scale storage if utilization exceeds the threshold (90%)
+        if ($currentUsage -ge $scaleThreshold) {
             # Calculate New Storage to Reduce Usage to 75%
             $newStorage = [math]::Ceiling($usedStorageGB / ($targetUtilization / 100))
 
@@ -55,7 +90,10 @@ foreach ($sqlMI in $sqlManagedInstances) {
             Write-Output "Scaling SQL MI: $sqlMI - Increasing storage from $currentStorage GB to $newStorage GB due to reaching $currentUsage% utilization."
             Set-AzSqlInstance -ResourceGroupName $resourceGroupName -Name $sqlMI -StorageSizeInGB $newStorage -Confirm:$false -Force
 
-            Write-Output "SQL MI: $sqlMI - Storage successfully increased to $newStorage GB."
+            # Send Email Notification using Logic App
+            Send-EmailNotification -sqlMI $sqlMI -currentStorage $currentStorage -newStorage $newStorage -currentUsage $currentUsage
+
+            Write-Output "SQL MI: $sqlMI - Storage successfully increased to $newStorage GB. Email notification sent via Logic App."
         } else {
             Write-Output "SQL MI: $sqlMI - Utilization at $currentUsage%, no scaling needed."
         }
