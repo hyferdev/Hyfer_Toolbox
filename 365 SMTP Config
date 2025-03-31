@@ -1,0 +1,24 @@
+# 🔍 Overview
+
+This page documents the production configuration for using Microsoft 365 SMTP (smtp.office365.com) as a scan-to-email relay for on-premises multifunction printers (MFPs).
+
+This approach uses authenticated SMTP with app passwords to securely send emails via Microsoft 365. It eliminates the need for a local SMTP relay server and ensures email delivery through a modern, cloud-based mail infrastructure.
+
+# ☁️ Microsoft 365 SMTP Connector Settings
+
+| **Setting**                | **Value**                                                                |
+|----------------------------|--------------------------------------------------------------------------|
+| **SMTP Server**            | smtp.office365.com                                                       |
+| **Port**                   | 587                                                                      |
+| **Encryption**             | STARTTLS                                                                 |
+| **Authentication**         | Enabled                                                                  |
+| **Username**               | Auth account (SMTP AUTH Permissions required)                            |
+| **Password**               | App password for auth account                                            |
+| **From Address**           | Sender Mailbox (send as permission required for auth account)            |
+| **Recipient Restrictions** | None (respects Microsoft 365 policies)                                   |
+| **Sending Limits**         | Subject to Microsoft 365 SMTP relay limits (e.g., 10,000 recipients/day) |
+
+Ref: 
+[Add SMTP AUTH permissions](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission#use-the-microsoft-365-admin-center-to-enable-or-disable-smtp-auth-on-specific-mailboxes)
+[Create app passwords](https://support.microsoft.com/en-us/account-billing/create-app-passwords-from-the-security-info-preview-page-d8bc744a-ce3f-4d4d-89c9-eb38ab9d4137)
+[Add send as permissions](https://learn.microsoft.com/en-us/microsoft-365/admin/add-users/give-mailbox-permissions-to-another-user?view=o365-worldwide#send-email-from-another-users-mailbox)
