@@ -9,9 +9,9 @@
 #   Storage: Storage Blob Data Contributor (or higher) on the container
 
 # =================== SET THESE ===================
-$storageAccount = "your storage account"
-$containerName  = "your container name"
-$blobName       = "ADGroups.csv"
+$storageAccount = "<your storage account>"
+$containerName  = "<your container>"
+$blobName       = "<name of your output csv>"
 $tempFolder     = "C:\Temp"
 $tempFile       = Join-Path $tempFolder $blobName
 # =================================================
